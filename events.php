@@ -23,7 +23,7 @@ class TTEvents_Widget extends WP_Widget {
 	public function form( $instance ) {
 		$defaults = array(
 			'title'    => '',
-			'show'     => '5'
+            'show'     => '5',
 		);
 		
 		extract( wp_parse_args((array)$instance, $defaults ) ); ?>
@@ -122,7 +122,7 @@ class TTEvents_Widget extends WP_Widget {
 				$description = $tournaments["data"][$index]["venueName"];
 			}
 			
-			if ( $tournaments["data"][$index]["website"] == "" ) {
+			if ( ! isset($tournaments["data"][$index]["website"]) ) {
 				$id = $tournaments["data"][$index]["tournamentID"];
 				$url = "https://www.pokemon.com/us/play-pokemon/pokemon-events/" . substr($id, 0, 2) . "-" . substr($id, 2, 2) . "-" . substr($id, 4, 6) . "/";
 			} else {
@@ -158,7 +158,7 @@ class TTResults_Widget extends WP_Widget {
 	public function form( $instance ) {
 		$defaults = array(
 			'title'    => '',
-			'show'     => '5'
+            'show'     => '5',
 		);
 		
 		extract( wp_parse_args((array)$instance, $defaults ) ); ?>
@@ -211,21 +211,22 @@ class TTResults_Widget extends WP_Widget {
 
 		$defaultSocketTimeout = ini_get('default_socket_timeout');
 		ini_set('default_socket_timeout', 5);
-		$filtersEncoded = base64_encode(json_encode($filters));
 		$tournaments = json_decode(@file_get_contents("https://results.trainertower.com/api/v1/events"), true);
 		ini_set('default_socket_timeout', $defaultSocketTimeout);
 		
 		$fullEventList = array();
+
+        if ( count($tournaments) > 0 ) {
+		    foreach($tournaments as $eventId => $tournament) {
+			    $eventDate = $tournament["date"];
 			
-		foreach($tournaments as $eventId => $tournament) {
-			$eventDate = $tournament["date"];
+			    if ( ! isset($fullEventList[$eventDate]) ) {
+				    $fullEventList[$eventDate] = array();
+			    } 
 			
-			if ( ! isset($fullEventList[$eventDate]) ) {
-				$fullEventList[$eventDate] = array();
-			} 
-			
-			$fullEventList[$eventDate][$eventId] = $tournament;
-		}
+			    $fullEventList[$eventDate][$eventId] = $tournament;
+		    }
+        }
 		
 		krsort($fullEventList);
 		$eventsList = array();
@@ -258,26 +259,26 @@ function display_event_list($eventList) {
 	
 ?>
 	<div class="container-fluid">
-		<div class="row small" style="background-color: #36456D; color: #ffffff;">
-			<div class="col-4 col-md-3 text-center text-center p-1"><b>Date</b></div>
-			<div class="col-8 col-md-6 text-center text-center p-1"><b>Location</b></div>
-			<div class="d-block d-md-none d-lg-block col-3 text-center p-1"><b>Country</b></div>
+		<div class="row" style="background-color: #36456D; color: #ffffff;">
+			<div class="col-3 col-md-4 col-lg-3 text-center text-center p-1"><b>Date</b></div>
+			<div class="col-6 col-md-8 col-lg-6 text-center text-center p-1"><b>Location</b></div>
+			<div class="d-block d-md-none d-lg-block col-3 col-lg-3 text-center p-1"><b>Country</b></div>
 		</div>
 <?php
 	
 		$index = 0;
-		foreach($eventList as $event) {
+		foreach($eventList as $key => $event) {
 ?>
-		<div class="row small" style="background-color: #<? echo ($index % 2 == 1) ? "f2f2f2" : "ffffff"; ?>; color: #36456D;">
+        <div class="row<? echo (($index + 1) == count($eventList)) ? " rounded-bottom" : ""; ?><? echo ($index % 2 == 1) ? " bg-light" : ""; ?>" style="color: #36456D;">
 			<div class="col-3 col-md-4 col-lg-3 text-center my-auto"><strong><? echo date("M j", $event["date"]); ?></strong></div>
 			<div class="col-6 col-md-8 col-lg-6 text-center my-auto">
 				<a href="<? echo $event["url"]; ?>">
 					<span class="d-none d-md-block d-lg-none"><? echo $countryList[$event["countryCode"]]["flagEmoji"]; ?></span>
-					<strong><? echo $event["description"]; ?></strong>
+					<? echo $event["description"]; ?>
 				</a>
 			</div>
-			<div class="d-block d-md-none d-lg-block col-3 text-center my-auto">
-				<img src="https://results.trainertower.com/<? echo $countryList[$event["countryCode"]]["flagUrl"]; ?>" />
+			<div class="d-block d-md-none d-lg-block col-3 col-lg-3 text-center my-auto">
+				<img class="image-fit" src="https://results.trainertower.com/<? echo $countryList[$event["countryCode"]]["flagUrl"]; ?>" />
 			</div>
 		</div>
 <?php
